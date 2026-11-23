@@ -221,6 +221,7 @@ After first deploy, fill the `sync: false` env vars in each service: `ELASTICSEA
 Notes: free Render web services sleep after ~15 min idle; free Postgres expires after 30 days; BullMQ needs Redis `noeviction` (set in blueprint). For a persistent demo consider paid plans.
 
 ---
+---
 
 > **Built for ReachInbox** — because at ReachInbox, reliable scheduling and sending of emails at scale isn't just a feature, it's the foundation everything else stands on. This project is a tiny slice of that system: persistent BullMQ jobs on Redis, a single source of truth in Postgres, safe rate limiting, real OAuth, live search — production patterns, zero cron, zero dropped emails.
 
