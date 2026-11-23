@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String           @id @default(cuid())
+  email            String           @unique
+  name             String
+  avatarUrl        String?
+  googleId         String?          @unique
+  createdAt        DateTime         @default(now())
+  emails           ScheduledEmail[]
+  slackConnection  SlackConnection?
+}
+
+model SlackConnection {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamId       String?
+  teamName     String?
+  accessToken  String
+  channelId    String?
+  connectedAt  DateTime @default(now())
+}
+
+model ScheduledEmail {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipient       String
+  fromName        String
+  fromEmail       String
+  subject         String
+  body            String
+  scheduledAt     DateTime
+  sentAt          DateTime?
+  status          String    @default("scheduled") // scheduled | sending | sent | failed | rate_limited
+  failReason      String?
+  hourlyLimit     Int
+  attempts        Int       @default(0)
+  bullJobId       String?
+  hourWindow      String?   // e.g. "2026-11-23T14" bucket used for per-sender hourly counting
+  rateLimitedAt   DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId, status])
+  @@index([status, scheduledAt])
+  @@index([hourWindow])
+}
