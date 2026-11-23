@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useI18n } from "../i18n";
 
 interface Props {
   googleUrl: string;
@@ -6,26 +7,36 @@ interface Props {
 }
 
 export default function Login({ googleUrl, onDevLogin }: Props) {
+  const { t, lang, setLang } = useI18n();
   const [devEmail, setDevEmail] = useState("");
   const [devName, setDevName] = useState("");
   const [busy, setBusy] = useState(false);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-sky-50 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl ring-1 ring-slate-200">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-sky-50 p-4 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950">
+      <div className="absolute right-4 top-4 flex items-center gap-2">
+        <select
+          value={lang}
+          onChange={(e) => setLang(e.target.value as typeof lang)}
+          className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+        >
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="hi">हिन्दी</option>
+        </select>
+      </div>
+      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700">
         <div className="mb-2 flex items-center gap-2">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-lg font-bold text-white">
-            O
+            R
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Outbox</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">ReachInbox</h1>
         </div>
-        <p className="mb-6 text-sm text-slate-500">
-          Reliable email scheduling &amp; sending at scale.
-        </p>
+        <p className="mb-6 text-sm text-slate-500 dark:text-slate-400">{t("tagline")}</p>
 
         <a
           href={googleUrl}
-          className="flex w-full items-center justify-center gap-3 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+          className="flex w-full items-center justify-center gap-3 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
         >
           <svg className="h-5 w-5" viewBox="0 0 24 24">
             <path
@@ -45,13 +56,13 @@ export default function Login({ googleUrl, onDevLogin }: Props) {
               d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
             />
           </svg>
-          Continue with Google
+          {t("continueGoogle")}
         </a>
 
         <div className="my-5 flex items-center gap-3 text-xs text-slate-400">
-          <div className="h-px flex-1 bg-slate-200" />
-          dev only
-          <div className="h-px flex-1 bg-slate-200" />
+          <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+          {t("devOnly")}
+          <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
         </div>
 
         <form
@@ -69,29 +80,27 @@ export default function Login({ googleUrl, onDevLogin }: Props) {
           <input
             type="email"
             required
-            placeholder="dev@example.com"
+            placeholder={t("emailPlaceholder")}
             value={devEmail}
             onChange={(e) => setDevEmail(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
           />
           <input
             type="text"
-            placeholder="Name (optional)"
+            placeholder={t("namePlaceholder")}
             value={devName}
             onChange={(e) => setDevName(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
           />
           <button
             type="submit"
             disabled={busy}
-            className="w-full rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+            className="w-full rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50 dark:bg-slate-200 dark:text-slate-900 dark:hover:bg-white"
           >
-            {busy ? "Signing in…" : "Dev login"}
+            {busy ? t("signingIn") : t("devLogin")}
           </button>
         </form>
-        <p className="mt-3 text-center text-[11px] text-slate-400">
-          Dev login requires ALLOW_DEV_LOGIN=true on the backend.
-        </p>
+        <p className="mt-3 text-center text-[11px] text-slate-400">{t("devLoginNote")}</p>
       </div>
     </div>
   );

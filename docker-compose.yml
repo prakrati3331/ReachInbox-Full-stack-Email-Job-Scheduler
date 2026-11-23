@@ -49,6 +49,50 @@ services:
       timeout: 5s
       retries: 20
 
+  # Full app stack (opt-in): docker compose --profile app up -d --build
+  api:
+    build: ./backend
+    profiles: ["app"]
+    env_file: ./backend/.env
+    environment:
+      DATABASE_URL: postgresql://outbox:outbox@postgres:5432/outbox
+      REDIS_URL: redis://redis:6379
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      API_PUBLIC_URL: http://localhost:4000
+      FRONTEND_URL: http://localhost:8080
+      GOOGLE_REDIRECT_URI: http://localhost:4000/api/auth/google/callback
+      SLACK_REDIRECT_URI: http://localhost:4000/api/slack/callback
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_started
+
+  worker:
+    build: ./backend
+    profiles: ["app"]
+    env_file: ./backend/.env
+    environment:
+      DATABASE_URL: postgresql://outbox:outbox@postgres:5432/outbox
+      REDIS_URL: redis://redis:6379
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      API_PUBLIC_URL: http://localhost:4000
+    command: ["node", "dist/worker.js"]
+    depends_on:
+      - api
+
+  web:
+    build: ./frontend
+    profiles: ["app"]
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+
 volumes:
   redis-data:
   pg-data:

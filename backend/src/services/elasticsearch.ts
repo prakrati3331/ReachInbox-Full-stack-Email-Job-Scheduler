@@ -61,6 +61,16 @@ export async function indexEmail(emailId: string): Promise<void> {
   }
 }
 
+export async function deleteEmailIndex(emailId: string): Promise<void> {
+  try {
+    await ensureIndex();
+    await client.delete({ index: config.esIndex, id: emailId });
+  } catch (err: unknown) {
+    const status = (err as { meta?: { statusCode?: number } })?.meta?.statusCode;
+    if (status !== 404) console.error("[elasticsearch] deleteEmailIndex failed:", err);
+  }
+}
+
 export async function searchEmails(userId: string, q: string, size = 50) {
   try {
     await ensureIndex();

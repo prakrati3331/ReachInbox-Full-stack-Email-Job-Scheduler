@@ -2,10 +2,12 @@ import crypto from "crypto";
 import { Router } from "express";
 import multer from "multer";
 import { Prisma } from "@prisma/client";
+import { Job } from "bullmq";
 import { prisma } from "../lib/prisma";
 import { requireAuth } from "../lib/auth";
 import { emailQueue, jobIdFor } from "../lib/queue";
-import { indexEmail, searchEmails } from "../services/elasticsearch";
+import { indexEmail, deleteEmailIndex, searchEmails } from "../services/elasticsearch";
+import { redis } from "../lib/redis";
 import { config } from "../config";
 import { saveAttachments, MAX_ATTACHMENTS, MAX_ATTACHMENT_BYTES } from "../lib/attachments";
 
@@ -145,4 +147,77 @@ emailsRouter.get("/search", async (req, res) => {
   const q = String(req.query.q ?? "");
   const results = await searchEmails(req.userId!, q);
   res.json({ results });
+});
+
+const PENDING_STATUSES = ["scheduled", "rate_limited", "sending"];
+
+async function removeJobFor(emailId: string): Promise<void> {
+  try {
+    const job = await Job.fromId(emailQueue, jobIdFor(emailId));
+    if (job) await job.remove();
+  } catch (err) {
+    console.error(`[emails] failed to remove job for ${emailId}:`, err);
+  }
+}
+
+async function deleteOne(userId: string, id: string): Promise<boolean> {
+  const email = await prisma.scheduledEmail.findFirst({
+    where: { id, userId },
+  });
+  if (!email) return false;
+  if (PENDING_STATUSES.includes(email.status)) await removeJobFor(email.id);
+  await prisma.scheduledEmail.delete({ where: { id: email.id } });
+  await deleteEmailIndex(email.id);
+  return true;
+}
+
+// Cancel a scheduled email or delete a sent/failed one.
+emailsRouter.delete("/:id", async (req, res) => {
+  const ok = await deleteOne(req.userId!, req.params.id);
+  if (!ok) return res.status(404).json({ error: "not_found" });
+  res.json({ ok: true });
+});
+
+// Bulk delete (e.g. clear all sent emails).
+emailsRouter.post("/delete", async (req, res) => {
+  const ids = Array.isArray(req.body?.ids) ? req.body.ids.slice(0, 1000) : [];
+  if (ids.length === 0) return res.status(400).json({ error: "ids_required" });
+  let deleted = 0;
+  for (const id of ids) {
+    if (await deleteOne(req.userId!, String(id))) deleted++;
+  }
+  res.json({ deleted });
+});
+
+emailsRouter.get("/stats", async (req, res) => {
+  const userId = req.userId!;
+  const [grouped, sentLast24h] = await Promise.all([
+    prisma.scheduledEmail.groupBy({
+      by: ["status"],
+      where: { userId },
+      _count: { _all: true },
+    }),
+    prisma.scheduledEmail.count({
+      where: {
+        userId,
+        status: "sent",
+        sentAt: { gte: new Date(Date.now() - 24 * 3600 * 1000) },
+      },
+    }),
+  ]);
+  const byStatus: Record<string, number> = {};
+  for (const g of grouped) byStatus[g.status] = g._count._all;
+
+  const window = Math.floor(Date.now() / 3600000) * 3600000;
+  const used = Number((await redis.get(`hourly:${userId}:${window}`)) ?? 0);
+
+  res.json({
+    byStatus,
+    sentLast24h,
+    hourly: {
+      used,
+      limit: config.maxEmailsPerHourPerSender,
+      windowEndsAt: window + 3600000,
+    },
+  });
 });

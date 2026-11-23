@@ -1,0 +1,121 @@
+{
+  "info": {
+    "name": "ReachInbox API",
+    "description": "Email scheduler API. Login via dev-login (ALLOW_DEV_LOGIN=true) or Google OAuth, then use the session cookie automatically.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [{ "key": "baseUrl", "value": "http://localhost:4000" }],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/health"
+      }
+    },
+    {
+      "name": "Dev login",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/auth/dev-login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"demo@reachinbox.dev\",\n  \"name\": \"Demo User\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Who am I",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/auth/me"
+      }
+    },
+    {
+      "name": "Schedule emails",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/emails/schedule",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"recipients\": [\"alice@example.com\", \"bob@example.com\"],\n  \"subject\": \"Hello from ReachInbox\",\n  \"body\": \"First paragraph.\\n\\nVisit https://example.com for details.\",\n  \"startAt\": \"2026-01-01T10:00:00.000Z\",\n  \"delayBetweenMs\": 5000,\n  \"hourlyLimit\": 100\n}"
+        }
+      }
+    },
+    {
+      "name": "List scheduled",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/emails/scheduled?page=1"
+      }
+    },
+    {
+      "name": "List sent",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/emails/sent?page=1"
+      }
+    },
+    {
+      "name": "Stats",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/emails/stats"
+      }
+    },
+    {
+      "name": "Search (Elasticsearch)",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/emails/search?q=hello"
+      }
+    },
+    {
+      "name": "Cancel scheduled email",
+      "request": {
+        "method": "DELETE",
+        "url": "{{baseUrl}}/api/emails/{{emailId}}"
+      }
+    },
+    {
+      "name": "Create template",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/templates",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Welcome\",\n  \"subject\": \"Welcome aboard\",\n  \"body\": \"Hi there!\"\n}"
+        }
+      }
+    },
+    {
+      "name": "List templates",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/templates"
+      }
+    },
+    {
+      "name": "Set status webhook",
+      "request": {
+        "method": "PUT",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/auth/webhook",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"webhookUrl\": \"https://webhook.site/your-id\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Slack status",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/slack/status"
+      }
+    }
+  ]
+}

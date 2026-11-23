@@ -73,6 +73,21 @@ export const api = {
   slackSetChannel: (channelId: string) =>
     request<{ ok: boolean }>("/slack/channel", { method: "POST", body: JSON.stringify({ channelId }) }),
   slackDisconnect: () => request<{ ok: boolean }>("/slack/disconnect", { method: "POST" }),
+
+  stats: () =>
+    request<{
+      byStatus: Record<string, number>;
+      sentLast24h: number;
+      hourly: { used: number; limit: number; windowEndsAt: number };
+    }>("/emails/stats"),
+
+  deleteEmail: (id: string) =>
+    request<{ ok: boolean }>(`/emails/${id}`, { method: "DELETE" }),
+  deleteEmails: (ids: string[]) =>
+    request<{ deleted: number }>("/emails/delete", {
+      method: "POST",
+      body: JSON.stringify({ ids }),
+    }),
 };
 
 export function googleLoginUrl(): string {

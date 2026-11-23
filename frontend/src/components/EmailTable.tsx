@@ -1,9 +1,11 @@
 import type { ScheduledEmail } from "../types";
+import { useI18n } from "../i18n";
 
 interface Props {
   emails: ScheduledEmail[];
   loading: boolean;
   emptyMessage: string;
+  onDelete?: (email: ScheduledEmail) => void;
 }
 
 function fmt(iso: string | null) {
@@ -12,30 +14,34 @@ function fmt(iso: string | null) {
 }
 
 const STATUS_STYLES: Record<string, string> = {
-  scheduled: "bg-sky-50 text-sky-700",
-  rate_limited: "bg-amber-50 text-amber-700",
-  sending: "bg-indigo-50 text-indigo-700",
-  sent: "bg-emerald-50 text-emerald-700",
-  failed: "bg-rose-50 text-rose-700",
+  scheduled: "bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300",
+  rate_limited: "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+  sending: "bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300",
+  sent: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
+  failed: "bg-rose-50 text-rose-700 dark:bg-rose-950 dark:text-rose-300",
 };
 
 export function StatusBadge({ status }: { status: string }) {
+  const { t } = useI18n();
   return (
     <span
       className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${
-        STATUS_STYLES[status] ?? "bg-slate-100 text-slate-600"
+        STATUS_STYLES[status] ?? "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
       }`}
     >
-      {status.replace("_", " ")}
+      {t(`st_${status}`)}
     </span>
   );
 }
 
-export default function EmailTable({ emails, loading, emptyMessage }: Props) {
+const PENDING = ["scheduled", "rate_limited", "sending"];
+
+export default function EmailTable({ emails, loading, emptyMessage, onDelete }: Props) {
+  const { t } = useI18n();
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-indigo-600" />
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-indigo-600 dark:border-slate-700" />
       </div>
     );
   }
@@ -56,35 +62,36 @@ export default function EmailTable({ emails, loading, emptyMessage }: Props) {
   }
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-slate-200 text-sm">
-        <thead className="bg-slate-50">
+      <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
+        <thead className="bg-slate-50 dark:bg-slate-900">
           <tr>
-            <th className="px-4 py-3 text-left font-medium text-slate-500">Email</th>
-            <th className="px-4 py-3 text-left font-medium text-slate-500">Subject</th>
-            <th className="px-4 py-3 text-left font-medium text-slate-500">Scheduled</th>
-            <th className="px-4 py-3 text-left font-medium text-slate-500">Sent</th>
-            <th className="px-4 py-3 text-left font-medium text-slate-500">Status</th>
+            <th className="px-4 py-3 text-left font-medium text-slate-500 dark:text-slate-400">{t("colEmail")}</th>
+            <th className="px-4 py-3 text-left font-medium text-slate-500 dark:text-slate-400">{t("colSubject")}</th>
+            <th className="px-4 py-3 text-left font-medium text-slate-500 dark:text-slate-400">{t("colScheduled")}</th>
+            <th className="px-4 py-3 text-left font-medium text-slate-500 dark:text-slate-400">{t("colSent")}</th>
+            <th className="px-4 py-3 text-left font-medium text-slate-500 dark:text-slate-400">{t("colStatus")}</th>
+            {onDelete && <th className="px-4 py-3" />}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100 bg-white">
+        <tbody className="divide-y divide-slate-100 bg-white dark:divide-slate-800 dark:bg-slate-950">
           {emails.map((e) => (
-            <tr key={e.id} className="hover:bg-slate-50">
-              <td className="px-4 py-3 font-medium text-slate-900">{e.recipient}</td>
-              <td className="max-w-xs truncate px-4 py-3 text-slate-600" title={e.subject}>
+            <tr key={e.id} className="hover:bg-slate-50 dark:hover:bg-slate-900">
+              <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{e.recipient}</td>
+              <td className="max-w-xs truncate px-4 py-3 text-slate-600 dark:text-slate-300" title={e.subject}>
                 {e.subject}
               </td>
-              <td className="whitespace-nowrap px-4 py-3 text-slate-600">{fmt(e.scheduledAt)}</td>
-              <td className="whitespace-nowrap px-4 py-3 text-slate-600">{fmt(e.sentAt)}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-slate-600 dark:text-slate-300">{fmt(e.scheduledAt)}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-slate-600 dark:text-slate-300">{fmt(e.sentAt)}</td>
               <td className="px-4 py-3">
                 <StatusBadge status={e.status} />
                 {e.openedAt && (
-                  <div className="mt-1 text-xs text-emerald-600" title={`Opened ${fmt(e.openedAt)}`}>
-                    opened
+                  <div className="mt-1 text-xs text-emerald-600 dark:text-emerald-400" title={`Opened ${fmt(e.openedAt)}`}>
+                    {t("opened")}
                   </div>
                 )}
                 {e.clickedAt && (
-                  <div className="text-xs text-indigo-600" title={`Clicked ${fmt(e.clickedAt)}`}>
-                    clicked
+                  <div className="text-xs text-indigo-600 dark:text-indigo-400" title={`Clicked ${fmt(e.clickedAt)}`}>
+                    {t("clicked")}
                   </div>
                 )}
                 {e.status === "failed" && e.failReason && (
@@ -93,6 +100,16 @@ export default function EmailTable({ emails, loading, emptyMessage }: Props) {
                   </div>
                 )}
               </td>
+              {onDelete && (
+                <td className="px-4 py-3 text-right">
+                  <button
+                    onClick={() => onDelete(e)}
+                    className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:border-rose-300 hover:text-rose-600 dark:border-slate-700 dark:text-slate-300 dark:hover:border-rose-700"
+                  >
+                    {PENDING.includes(e.status) ? t("cancel") : t("delete")}
+                  </button>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

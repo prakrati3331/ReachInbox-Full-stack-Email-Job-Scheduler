@@ -3,7 +3,7 @@ import { Request, Response, NextFunction } from "express";
 import { config } from "../config";
 import { prisma } from "./prisma";
 
-const COOKIE = "outbox_session";
+const COOKIE = "reachinbox_session";
 const MAX_AGE_MS = 7 * 24 * 3600 * 1000;
 
 function sign(value: string): string {

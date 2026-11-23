@@ -99,6 +99,6 @@ export async function notifyRateLimitHit(userId: string): Promise<void> {
   await postMessage(
     conn.accessToken,
     channel,
-    `:warning: *Outbox rate limit reached* — ${user?.email ?? userId} hit their hourly email send limit. Jobs are being rescheduled into the next hour window.`
+    `:warning: *ReachInbox rate limit reached* — ${user?.email ?? userId} hit their hourly email send limit. Jobs are being rescheduled into the next hour window.`
   );
 }

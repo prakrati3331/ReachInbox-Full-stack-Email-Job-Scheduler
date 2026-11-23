@@ -1,4 +1,4 @@
-# Outbox — Email Job Scheduler & Dashboard
+# ReachInbox — Email Scheduler & Dashboard
 
 A production-grade email scheduling service: accept send requests via API, schedule them with **BullMQ delayed jobs on Redis**, persist everything in **PostgreSQL**, send through **Ethereal Email (fake SMTP)**, index emails in **Elasticsearch** for search, and serve a **React dashboard** with Google login, compose, scheduled/sent views and Slack rate-limit alerts.
 
@@ -106,6 +106,40 @@ npm run dev              # http://localhost:5173 (proxies /api -> :4000)
 - Open/click badges on sent emails; attachments stored in `backend/uploads/` (gitignored)
 - Elasticsearch-backed search across emails
 - Slack connect/disconnect + notification channel picker
+- **Cancel/delete** — per-row cancel for pending emails (removes the BullMQ job) and delete for sent/failed, plus "Clear sent" bulk delete; ES docs removed too
+- **Stats endpoint** — `GET /api/emails/stats` (per-status counts, sent-last-24h, hourly Redis counter usage)
+- **Hourly usage bar** in the header showing `used/limit` for the current window
+- **i18n** — English / Español / हिन्दी switcher (header + login), persisted in localStorage
+- **Dark mode** toggle (persisted)
+- **CSV export** of the current tab's list
+- **Failed-send toasts** — the 5s poll diff surfaces new failures without opening the table
+
+## Run everything in Docker (optional)
+
+Infra only (default): `docker compose up -d`
+
+Full stack including API, worker and frontend:
+
+```bash
+docker compose --profile app up -d --build
+# dashboard -> http://localhost:8080  (nginx serves frontend + proxies /api)
+# api      -> http://localhost:4000   (Bull Board: /admin/queues)
+```
+
+Backend and frontend each have a `Dockerfile`; the backend image runs `prisma migrate deploy` on boot. The worker uses the same image with `node dist/worker.js`.
+
+## Demo script (5 min)
+
+1. `docker compose up -d`, `cd backend && npm run dev` + `npm run worker`, `cd frontend && npm run dev`
+2. Open http://localhost:5173 → dev-login (or Google) → dashboard
+3. **Compose**: upload a CSV of ~10 emails, subject/body, start time = now+1min, delay 3s, hourly limit e.g. 5 → Schedule
+4. Watch **Scheduled → Sent** tabs update live; open Bull Board (`/admin/queues`) to see delayed/active/completed jobs
+5. **Restart test**: schedule another email 2 min out → kill the worker (`Ctrl+C`) → restart `npm run worker` → email still sends on time
+6. **Rate limit**: schedule 10 emails with hourly limit 3 → first 3 send, rest show `rate limited` and resume next hour window
+7. **Tracking**: open a sent email's Ethereal preview (link in worker logs) or hit `/api/track/o/<token>.gif` → "opened" badge appears
+8. **Extras**: switch language (EN/ES/HI), toggle dark mode, export CSV, set a webhook URL and watch it receive `email.sent`
+
+Postman collection: `docs/postman/ReachInbox.postman_collection.json`
 
 ## Assumptions & trade-offs
 

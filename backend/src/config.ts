@@ -25,8 +25,8 @@ export const config = {
   etherealUser: process.env.ETHEREAL_USER ?? "",
   etherealPass: process.env.ETHEREAL_PASS ?? "",
 
-  defaultFromName: process.env.DEFAULT_FROM_NAME ?? "Outbox Labs",
-  defaultFromEmail: process.env.DEFAULT_FROM_EMAIL ?? "hello@outbox-labs.dev",
+  defaultFromName: process.env.DEFAULT_FROM_NAME ?? "ReachInbox",
+  defaultFromEmail: process.env.DEFAULT_FROM_EMAIL ?? "hello@reachinbox.dev",
 
   google: {
     clientId: process.env.GOOGLE_CLIENT_ID ?? "",
