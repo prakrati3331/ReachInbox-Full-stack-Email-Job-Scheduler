@@ -96,3 +96,5 @@ databases:
     plan: free
     databaseName: reachinbox
     user: reachinbox
+
+# sync trigger
