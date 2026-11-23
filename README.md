@@ -211,10 +211,11 @@ Postman collection: `docs/postman/ReachInbox.postman_collection.json`
 
 | Service | Type | URL |
 |---|---|---|
-| `reachinbox-app` | Web (API + built frontend, single origin) | `https://reachinbox-app.onrender.com` |
-| `reachinbox-worker` | Background Worker (BullMQ sender) | — |
+| `reachinbox-app` | Web — API + BullMQ worker + built frontend, single origin (`dist/all.js`) | `https://reachinbox-app.onrender.com` |
 | `reachinbox-redis` | Key Value (BullMQ + rate counters) | internal |
 | `reachinbox-db` | PostgreSQL | internal |
+
+The API and worker share one process on the free tier (Render doesn't offer background workers on free plans); BullMQ stalled-job recovery covers restarts. For scale, split into a paid Background Worker running `node dist/worker.js`.
 
 After first deploy, fill the `sync: false` env vars in each service: `ELASTICSEARCH_URL` (free deployment at cloud.elastic.co), `GOOGLE_CLIENT_ID/SECRET` (update redirect URI to `https://reachinbox-app.onrender.com/api/auth/google/callback` in Google Cloud), `SLACK_*` (redirect URI `https://reachinbox-app.onrender.com/api/slack/callback`), `BULL_BOARD_USER/PASSWORD`.
 

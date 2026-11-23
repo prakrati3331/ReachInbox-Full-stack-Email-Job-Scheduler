@@ -11,7 +11,10 @@ import { indexEmail } from "./services/elasticsearch";
 import { attachmentBuffer } from "./lib/attachments";
 import type { StoredAttachment } from "./lib/attachments";
 
-const QUEUE_OPTS = { connection: redis };
+// BullMQ Worker issues blocking commands, so it must not share the app's
+// ioredis connection (used by queues, rate counters, health checks).
+const workerConnection = redis.duplicate();
+const QUEUE_OPTS = { connection: workerConnection };
 
 /** Re-add BullMQ jobs for DB rows that lost their Redis job (e.g. Redis flush). */
 async function ensureJobFor(emailId: string, scheduledAt: Date) {
@@ -134,7 +137,7 @@ const worker = new Worker(
     }
   },
   {
-    connection: redis,
+    connection: workerConnection,
     concurrency: config.workerConcurrency,
     // BullMQ limiter => min spacing between job starts (provider-style throttle).
     limiter: { max: 1, duration: config.minDelayBetweenSendsMs },
@@ -184,6 +187,7 @@ main().catch((err) => {
 
 const shutdown = async () => {
   await worker.close();
+  await workerConnection.quit();
   await redis.quit();
   process.exit(0);
 };
