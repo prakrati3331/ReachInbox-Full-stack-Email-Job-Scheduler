@@ -1,5 +1,7 @@
 import "express-async-errors";
 import express from "express";
+import { existsSync } from "fs";
+import path from "path";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { createBullBoard } from "@bull-board/api";
@@ -60,6 +62,16 @@ app.use("/api/emails", emailsRouter);
 app.use("/api/slack", slackRouter);
 app.use("/api/templates", templatesRouter);
 app.use("/api/track", trackRouter);
+
+// Serve the built frontend (single-origin deploy) when present.
+const frontendDist = path.resolve(__dirname, "../../frontend/dist");
+if (existsSync(frontendDist)) {
+  app.use(express.static(frontendDist));
+  app.get("*", (req, res, next) => {
+    if (req.path.startsWith("/api") || req.path.startsWith("/admin")) return next();
+    res.sendFile(path.join(frontendDist, "index.html"));
+  });
+}
 
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error("[api] error:", err);

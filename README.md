@@ -209,3 +209,18 @@ Postman collection: `docs/postman/ReachInbox.postman_collection.json`
 > **Built for ReachInbox** — because at ReachInbox, reliable scheduling and sending of emails at scale isn't just a feature, it's the foundation everything else stands on. This project is a tiny slice of that system: persistent BullMQ jobs on Redis, a single source of truth in Postgres, safe rate limiting, real OAuth, live search — production patterns, zero cron, zero dropped emails.
 
 ⭐ **See it in action** — clone it, run `docker compose up -d`, hit *Compose New Email*, and watch thousands of jobs schedule, throttle and send themselves — surviving restarts, respecting rate limits, and reporting every status back to you. Sometimes the best code is the kind you never have to think about. 🚀
+
+## Deploy to Render (hosted link)
+
+`render.yaml` is a Blueprint — Render Dashboard → **New → Blueprint** → connect this repo and it provisions everything:
+
+| Service | Type | URL |
+|---|---|---|
+| `reachinbox-app` | Web (API + built frontend, single origin) | `https://reachinbox-app.onrender.com` |
+| `reachinbox-worker` | Background Worker (BullMQ sender) | — |
+| `reachinbox-redis` | Key Value (BullMQ + rate counters) | internal |
+| `reachinbox-db` | PostgreSQL | internal |
+
+After first deploy, fill the `sync: false` env vars in each service: `ELASTICSEARCH_URL` (free deployment at cloud.elastic.co), `GOOGLE_CLIENT_ID/SECRET` (update redirect URI to `https://reachinbox-app.onrender.com/api/auth/google/callback` in Google Cloud), `SLACK_*` (redirect URI `https://reachinbox-app.onrender.com/api/slack/callback`), `BULL_BOARD_USER/PASSWORD`.
+
+Notes: free Render web services sleep after ~15 min idle; free Postgres expires after 30 days; BullMQ needs Redis `noeviction` (set in blueprint). For a persistent demo consider paid plans.

@@ -1,0 +1,137 @@
+# Render Blueprint — ReachInbox full stack
+# Deploy: Render Dashboard -> New -> Blueprint -> connect this repo.
+# One web service serves BOTH the API and the built React frontend
+# (single origin, so auth cookies just work). A separate background
+# worker runs the BullMQ email processor.
+
+services:
+  # ---------- Redis (BullMQ + rate counters) ----------
+  - type: redis
+    name: reachinbox-redis
+    plan: free
+    ipAllowList: []          # internal-only access
+    maxmemoryPolicy: noeviction   # BullMQ requires noeviction
+
+  # ---------- API + frontend (single web service) ----------
+  - type: web
+    name: reachinbox-app
+    runtime: node
+    plan: free
+    buildCommand: |
+      cd backend && npm ci --include=dev && npx prisma generate && npm run build && \
+      cd ../frontend && npm ci --include=dev && npm run build && \
+      cd ../backend && npx prisma migrate deploy
+    startCommand: cd backend && node dist/index.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "4000"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: reachinbox-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: reachinbox-redis
+          property: connectionString
+      - key: FRONTEND_URL
+        value: https://reachinbox-app.onrender.com
+      - key: API_PUBLIC_URL
+        value: https://reachinbox-app.onrender.com
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: ES_INDEX
+        value: emails
+      - key: WORKER_CONCURRENCY
+        value: "10"
+      - key: MIN_DELAY_BETWEEN_SENDS_MS
+        value: "2000"
+      - key: MAX_EMAILS_PER_HOUR_PER_SENDER
+        value: "100"
+      - key: DEFAULT_FROM_NAME
+        value: ReachInbox
+      - key: DEFAULT_FROM_EMAIL
+        value: hello@reachinbox.dev
+      - key: ALLOW_DEV_LOGIN
+        value: "false"
+      # --- fill these in after deploy (Render dashboard -> Environment) ---
+      - key: ELASTICSEARCH_URL
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        value: https://reachinbox-app.onrender.com/api/auth/google/callback
+      - key: SLACK_CLIENT_ID
+        sync: false
+      - key: SLACK_CLIENT_SECRET
+        sync: false
+      - key: SLACK_REDIRECT_URI
+        value: https://reachinbox-app.onrender.com/api/slack/callback
+      - key: SLACK_NOTIFY_CHANNEL_ID
+        sync: false
+      - key: ETHEREAL_USER
+        sync: false
+      - key: ETHEREAL_PASS
+        sync: false
+      - key: BULL_BOARD_USER
+        sync: false
+      - key: BULL_BOARD_PASSWORD
+        sync: false
+
+  # ---------- BullMQ worker (sends the emails) ----------
+  - type: worker
+    name: reachinbox-worker
+    runtime: node
+    plan: free
+    buildCommand: cd backend && npm ci --include=dev && npx prisma generate && npm run build && npx prisma migrate deploy
+    startCommand: cd backend && node dist/worker.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: reachinbox-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: reachinbox-redis
+          property: connectionString
+      - key: FRONTEND_URL
+        value: https://reachinbox-app.onrender.com
+      - key: ES_INDEX
+        value: emails
+      - key: WORKER_CONCURRENCY
+        value: "10"
+      - key: MIN_DELAY_BETWEEN_SENDS_MS
+        value: "2000"
+      - key: MAX_EMAILS_PER_HOUR_PER_SENDER
+        value: "100"
+      - key: DEFAULT_FROM_NAME
+        value: ReachInbox
+      - key: DEFAULT_FROM_EMAIL
+        value: hello@reachinbox.dev
+      - key: ELASTICSEARCH_URL
+        sync: false
+      - key: SLACK_CLIENT_ID
+        sync: false
+      - key: SLACK_CLIENT_SECRET
+        sync: false
+      - key: SLACK_NOTIFY_CHANNEL_ID
+        sync: false
+      - key: ETHEREAL_USER
+        sync: false
+      - key: ETHEREAL_PASS
+        sync: false
+
+# ---------- Managed Postgres ----------
+databases:
+  - name: reachinbox-db
+    plan: free
+    databaseName: reachinbox
+    user: reachinbox
