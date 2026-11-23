@@ -1,11 +1,12 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
-export type Lang = "en" | "es" | "hi";
+export type Lang = "en" | "es" | "hi" | "kn";
 
 export const LANGS: { code: Lang; label: string }[] = [
   { code: "en", label: "English" },
   { code: "es", label: "Español" },
   { code: "hi", label: "हिन्दी" },
+  { code: "kn", label: "ಕನ್ನಡ" },
 ];
 
 type Dict = Record<string, string>;
@@ -56,8 +57,8 @@ const en: Dict = {
 
   st_scheduled: "scheduled",
   st_rate_limited: "rate limited",
-  st_sending: "sending",
-  st_sent: "sent",
+      st_sending: "sending",
+      st_sent: "sent",
   st_failed: "failed",
 
   composeTitle: "Compose New Email",
@@ -82,7 +83,7 @@ const en: Dict = {
   templateSaved: "Template saved",
   templateSaveFail: "Name, subject and body needed to save a template",
   webhook: "Status webhook",
-  webhookHint: "(POSTed on sent/failed)",
+      webhookHint: "(POSTed on sent/failed)",
   webhookSaved: "Webhook URL saved",
   webhookCleared: "Webhook cleared",
   webhookSaveFail: "Failed to save webhook",
@@ -92,7 +93,7 @@ const en: Dict = {
   scheduledFail: "Scheduling failed",
   needLeads: "Upload a CSV/TXT file with email leads first",
   needSubjectBody: "Subject and body are required",
-  detectedEmails: "Detected",
+      detectedEmails: "Detected",
   emailWord: "email",
   parsing: "Parsing…",
   scheduling: "Scheduling…",
@@ -277,7 +278,96 @@ const hi: Dict = {
   failedBatchToast: "ईमेल भेजने में विफल",
 };
 
-const dicts: Record<Lang, Dict> = { en, es, hi };
+const kn: Dict = {
+  tagline: "ಸ್ಕೇಲ್‌ನಲ್ಲಿ ವಿಶ್ವಾಸಾರ್ಹ ಇಮೇಲ್ ಶೆಡ್ಯೂಲಿಂಗ್ ಮತ್ತು ಕಳುಹಿಸುವಿಕೆ.",
+  continueGoogle: "Google ನೊಂದಿಗೆ ಮುಂದುವರಿಸಿ",
+  devOnly: "dev ಮಾತ್ರ",
+  emailPlaceholder: "dev@example.com",
+  namePlaceholder: "ಹೆಸರು (ಐಚ್ಛಿಕ)",
+  devLogin: "Dev ಲಾಗಿನ್",
+  signingIn: "ಸೈನ್ ಇನ್ ಆಗುತ್ತಿದೆ…",
+  devLoginNote: "Dev ಲಾಗಿನ್‌ಗಾಗಿ backend ನಲ್ಲಿ ALLOW_DEV_LOGIN=true ಇರಬೇಕು.",
+
+  connectSlack: "Slack ಕನೆಕ್ಟ್ ಮಾಡಿ",
+  slackConnected: "Slack",
+  pickChannel: "ಚಾನಲ್ ಆಯ್ಕೆಮಾಡಿ…",
+  disconnect: "ಡಿಸ್ಕನೆಕ್ಟ್",
+  logout: "ಲಾಗ್ ಔಟ್",
+
+  tabScheduled: "ಶೆಡ್ಯೂಲ್ ಮಾಡಿದ ಇಮೇಲ್‌ಗಳು",
+  tabSent: "ಕಳುಹಿಸಿದ ಇಮೇಲ್‌ಗಳು",
+  searchPlaceholder: "ಇಮೇಲ್‌ಗಳನ್ನು ಹುಡುಕಿ (Elasticsearch)…",
+  search: "ಹುಡುಕಿ",
+  searching: "…",
+  compose: "+ ಹೊಸ ಇಮೇಲ್ ರಚಿಸಿ",
+  exportCsv: "CSV ಎಕ್ಸ್‌ಪೋರ್ಟ್",
+  clearSent: "ಕಳುಹಿಸಿದವುಗಳನ್ನು ತೆರವುಗೊಳಿಸಿ",
+  clearSentConfirm: "ಎಲ್ಲಾ ಕಳುಹಿಸಿದ/ವಿಫಲ ಇಮೇಲ್‌ಗಳನ್ನು ಅಳಿಸುವುದೇ? ಇದು ಹಿಂತಿರುಗಿಸಲಾಗದು.",
+  emptyScheduled: "ಇನ್ನೂ ಶೆಡ್ಯೂಲ್ ಮಾಡಿದ ಇಮೇಲ್‌ಗಳಿಲ್ಲ — ಪ್ರಾರಂಭಿಸಲು ಒಂದು ರಚಿಸಿ.",
+  emptySent: "ಇನ್ನೂ ಕಳುಹಿಸಿದ ಇಮೇಲ್‌ಗಳಿಲ್ಲ.",
+  noMatches: "ಯಾವುದೇ ಫಲಿತಾಂಶಗಳಿಲ್ಲ.",
+  bullBoard: "ಲೈವ್ ಕ್ಯೂ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್:",
+  loadFailed: "ಲೋಡ್ ಮಾಡಲು ವಿಫಲವಾಯಿತು",
+  searchFailed: "ಹುಡುಕಾಟ ವಿಫಲವಾಯಿತು",
+
+  colEmail: "ಇಮೇಲ್",
+  colSubject: "ವಿಷಯ",
+  colScheduled: "ಶೆಡ್ಯೂಲ್ ಸಮಯ",
+  colSent: "ಕಳುಹಪಾರ್ಟೀಷನ್",
+  colStatus: "ಸ್ಥಿತಿ",
+  opened: "ತೆರೆದಿದೆ",
+  clicked: "ಕ್ಲಿಕ್",
+  cancel: "ರದ್ದುಮಾಡಿ",
+  delete: "ಅಳಿಸಿ",
+  deletedOk: "ಅಳಿಸಲಾಗಿದೆ",
+  deleteFailed: "ಅಳಿಸಲು ವಿಫಲವಾಯಿತು",
+
+  st_scheduled: "ಶೆಡ್ಯೂಲ್ ಮಾಡಲಾಗಿದೆ",
+  st_rate_limited: "ರೇಟ್ ಮಿತಿ",
+  st_sending: "ಕಳುಹಪಾರ್ಟೀಷ",
+  st_sent: "ಕಳುಹಪಾರ್ಟೀಷನ್",
+  st_failed: "ವಿಫಲ",
+
+  composeTitle: "ಹೊಸ ಇಮೇಲ್ ರಚಿಸಿ",
+  template: "ಟೆಂಪ್ಲೇಟ್",
+  startBlank: "— ಖಾಲಿ ಪ್ರಾರಂಭಿಸಿ —",
+  leads: "ಲೀಡ್ಸ್ (CSV / TXT)",
+  uploadLeads: "CSV ಅಥವಾ TXT ಅಪ್‌ಲೋಡ್ ಮಾಡಲು ಕ್ಲಿಕ್ ಮಾಡಿ",
+  subject: "ವಿಷಯ",
+  subjectPlaceholder: "ನಿಮ್ಮ ಇಮೇಲ್ ವಿಷಯ",
+  body: "ಸಂದೇಶ",
+  bodyPlaceholder: "ಇಮೇಲ್ ಸಂದೇಶ…",
+  attachments: "ಅಟ್ಯಾಚ್‌ಮೆಂಟ್‌ಗಳು",
+  attachmentsHint: "(ಐಚ್ಛಿಕ, ಗರಿಷ್ಠ 5 · 8MB ಒಟ್ಟು)",
+  addAttachments: "+ ಅಟ್ಯಾಚ್‌ಮೆಂಟ್ ಸೇರಿಸಿ",
+  maxAttachments: "ಗರಿಷ್ಠ 5 ಅಟ್ಯಾಚ್‌ಮೆಂಟ್‌ಗಳು",
+  startTime: "ಪ್ರಾರಂಭ ಸಮಯ",
+  delayBetween: "ನಡುವಿನ ವಿಳಂಬ (ಸೆಕೆಂಡು)",
+  hourlyLimit: "ಪ್ರತಿ ಗಂಟೆ ಮಿತಿ",
+  saveAsTemplate: "ಟೆಂಪ್ಲೇಟ್ ಆಗಿ ಉಳಿಸಿ",
+  templateNamePlaceholder: "ಟೆಂಪ್ಲೇಟ್ ಹೆಸರು",
+  save: "ಉಳಿಸಿ",
+  templateSaved: "ಟೆಂಪ್ಲೇಟ್ ಉಳಿಸಲಾಗಿದೆ",
+  templateSaveFail: "ಟೆಂಪ್ಲೇಟ್‌ಗಾಗಿ ಹೆಸರು, ವಿಷಯ ಮತ್ತು ಸಂದೇಶ ಬೇಕು",
+  webhook: "ಸ್ಥಿತಿ webhook",
+  webhookHint: "(ಕಳುಹಪಾರ್ಟೀಷನ್/ವಿಫಲ POST)",
+  webhookSaved: "Webhook ಉಳಿಸಲಾಗಿದೆ",
+  webhookCleared: "Webhook ತೆರವುಗೊಳಿಸಲಾಗಿದೆ",
+  webhookSaveFail: "Webhook ಉಳಿಸಲು ವಿಫಲವಾಯಿತು",
+  scheduleBtn: "ಶೆಡ್ಯೂಲ್ ಮಾಡಿ",
+  emailsWord: "ಇಮೇಲ್‌ಗಳು",
+  scheduledOk: "ಶೆಡ್ಯೂಲ್ ಮಾಡಲಾಗಿದೆ",
+  scheduledFail: "ಶೆಡ್ಯೂಲ್ ಮಾಡಲು ವಿಫಲವಾಯಿತು",
+  needLeads: "ಮೊದಲು ಇಮೇಲ್‌ಗಳಿರುವ CSV/TXT ಫೈಲ್ ಅಪ್‌ಲೋಡ್ ಮಾಡಿ",
+  needSubjectBody: "ವಿಷಯ ಮತ್ತು ಸಂದೇಶ ಅಗತ್ಯವಿದೆ",
+  detectedEmails: "ಪತ್ತೆಯಾದ ಇಮೇಲ್‌ಗಳು:",
+  emailWord: "ಇಮೇಲ್",
+  parsing: "ಪಾರ್ಸ್ ಆಗುತ್ತಿದೆ…",
+  scheduling: "ಶೆಡ್ಯೂಲ್ ಆಗುತ್ತಿದೆ…",
+  failedBatchToast: "ಇಮೇಲ್‌ಗಳನ್ನು ಕಳುಹಿಸಲು ವಿಫಲವಾಯಿತು",
+};
+
+const dicts: Record<Lang, Dict> = { en, es, hi, kn };
 
 interface I18nCtx {
   lang: Lang;

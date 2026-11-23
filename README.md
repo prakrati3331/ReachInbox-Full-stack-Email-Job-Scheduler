@@ -5,34 +5,65 @@ A production-grade email scheduling service: accept send requests via API, sched
 ## Architecture
 
 ```
-React dashboard ──► Express API ──► PostgreSQL (Prisma)
-                        │
-                        ├── BullMQ Queue "email-sends" ──► Redis (delayed jobs)
-                        │                                    │
-                        │                              BullMQ Worker
-                        │                              (concurrency + limiter)
-                        │                                    │
-                        │              ┌─────────────────────┼──────────────────┐
-                        │              ▼                     ▼                  ▼
-                        │        Ethereal SMTP        Redis hourly      Elasticsearch
-                        │        (nodemailer)          counters          (search index)
-                        │                                             Slack notify
-                        └── Bull Board at /admin/queues (live queue UI)
+┌──────────────┐   schedule request    ┌──────────────────┐
+│ React        │ ────────────────────► │  Express API     │
+│ Dashboard    │                       │  (port 4000)     │
+└──────────────┘                       └────────┬─────────┘
+                                                │
+                     ┌──────────────────────────┼───────────────────────┐
+                     ▼                          ▼                       ▼
+            ┌─────────────────┐      ┌───────────────────┐     ┌──────────────────┐
+            │  PostgreSQL     │      │  Redis / BullMQ   │     │ Elasticsearch    │
+            │  (Prisma)       │      │  delayed jobs +   │     │ (search index)   │
+            │                 │      │  hourly counters  │     │                  │
+            └─────────────────┘      └─────────┬─────────┘     └──────────────────┘
+                                               │ job becomes due
+                                               ▼
+                                      ┌─────────────────┐
+                                      │  BullMQ Worker  │
+                                      │  concurrency +  │
+                                      │  min-delay      │
+                                      └────────┬────────┘
+                                               │
+                          ┌────────────────────┼─────────────────────┐
+                          ▼                    ▼                     ▼
+                 ┌────────────────┐   ┌──────────────────┐   ┌─────────────────┐
+                 │ Ethereal SMTP  │   │ Slack notify     │   │ Status webhook  │
+                 │ (nodemailer)   │   │ (rate-limit hit) │   │ (sent/failed)   │
+                 └────────────────┘   └──────────────────┘   └─────────────────┘
+
+   Bull Board live queue UI: http://localhost:4000/admin/queues
 ```
 
-- **Scheduling**: `POST /api/emails/schedule` creates one DB row per recipient and one BullMQ delayed job per row (`jobId = email:<id>`). No cron anywhere — timing lives entirely in Redis delayed sets, so it survives restarts.
-- **Persistence on restart**: BullMQ jobs are stored in Redis, so delayed jobs survive API/worker restarts automatically. On worker boot, `reconcileScheduledEmails()` scans DB rows still in `scheduled`/`rate_limited` state and re-creates any job that is missing (e.g. after a Redis flush), so nothing is lost or restarted from day one. The processor also checks DB status first, so a job can never send an email twice (idempotency).
-- **Rate limiting**: two layers.
-  1. *Min delay between sends* — BullMQ worker `limiter: { max: 1, duration: MIN_DELAY_BETWEEN_SENDS_MS }` (default 2s between job starts, i.e. provider-style throttling).
-  2. *Emails per hour* — Redis counter `hourly:<userId>:<hourWindow>` incremented atomically (`INCR`+`EXPIRE`) inside the worker, safe across multiple worker instances. Limit = the batch's `hourlyLimit`, falling back to `MAX_EMAILS_PER_HOUR_PER_SENDER`. When the window is full the job is **not failed** — it calls `job.moveToDelayed(nextHourStart)` and throws `DelayedError`, so BullMQ re-queues it for the next hour window automatically. The instant a limit is hit we also POST to the user's connected Slack channel.
-- **Concurrency**: `WORKER_CONCURRENCY` controls parallel job processing; combined with the limiter, sends are spaced by the configured delay.
-- **Search**: every email is indexed into Elasticsearch on create and on every status change; `GET /api/emails/search?q=` powers the dashboard search box.
-- **Auth**: real Google OAuth2 (authorization-code flow) issues an HMAC-signed httpOnly session cookie. Slack uses the real OAuth v2 flow (`chat:write` + channel read scopes) and stores the bot token per user.
+
+
+```mermaid
+flowchart TD
+    A([👤 User]) --> B["🖥️ React Dashboard"]
+    B -->|"1 · Schedule request"| C["⚙️ Express API"]
+    C -->|"2 · Save email record"| D[("🗄️ PostgreSQL")]
+    C -->|"3 · Enqueue delayed job"| E[("🔴 Redis / BullMQ")]
+    E -->|"4 · Job becomes due"| F["🔧 Worker"]
+    F -->|"5 · Check hourly limit"| G{"🚦 Limit<br/>reached?"}
+    G -->|"Yes"| H["⏰ Move to next<br/>hour window"]
+    H -.->|"re-queued automatically"| E
+    G -->|"No"| I["✉️ Send via<br/>Ethereal SMTP"]
+    I -->|"6 · Mark sent / failed"| D
+    I -->|"7 · Index document"| J[("🔍 Elasticsearch")]
+    F -->|"8 · Alert on limit hit"| K["💬 Slack"]
+    F -->|"9 · Status webhook"| L["🔗 User webhook URL"]
+    style A fill:#eef2ff,stroke:#6366f1
+    style B fill:#eef2ff,stroke:#6366f1
+    style C fill:#ecfeff,stroke:#0891b2
+    style F fill:#fef3c7,stroke:#d97706
+    style G fill:#fee2e2,stroke:#dc2626
+```
 
 ## Repo layout
 
 ```
 backend/    Express + TypeScript API, BullMQ worker, Prisma, services
+
 frontend/   Vite + React + TypeScript + Tailwind dashboard
 docker-compose.yml   Redis + Postgres + Elasticsearch
 ```
@@ -94,10 +125,13 @@ npm run dev              # http://localhost:5173 (proxies /api -> :4000)
 - Elasticsearch indexing & search API
 - Bull Board queue dashboard
 - Ethereal SMTP sending via nodemailer (auto test account if no creds)
+
+
 - **Email templates** — per-user reusable subject/body (`/api/templates` CRUD, picker + "save as template" in compose)
 - **Attachments** — up to 5 files / 8 MB total per email, stored under `backend/uploads/` and attached via nodemailer
 - **Open/click tracking** — every email gets a per-recipient tracking token; HTML includes a 1×1 open pixel (`/api/track/o/:token.gif`) and links are rewritten through `/api/track/c/:token?u=…` redirects. `openedAt`/`clickedAt` are recorded on the email and shown in the dashboard
 - **Status webhooks** — users can set a webhook URL (`PUT /api/auth/webhook` or the compose modal); the backend POSTs `{event: "email.sent"|"email.failed", …}` JSON on terminal status changes
+
 
 **Frontend**
 - Real Google OAuth login, header with name/email/avatar, logout
@@ -106,12 +140,23 @@ npm run dev              # http://localhost:5173 (proxies /api -> :4000)
 - Open/click badges on sent emails; attachments stored in `backend/uploads/` (gitignored)
 - Elasticsearch-backed search across emails
 - Slack connect/disconnect + notification channel picker
+
+
 - **Cancel/delete** — per-row cancel for pending emails (removes the BullMQ job) and delete for sent/failed, plus "Clear sent" bulk delete; ES docs removed too
+
+
 - **Stats endpoint** — `GET /api/emails/stats` (per-status counts, sent-last-24h, hourly Redis counter usage)
+
+
 - **Hourly usage bar** in the header showing `used/limit` for the current window
+
+
 - **i18n** — English / Español / हिन्दी switcher (header + login), persisted in localStorage
+
 - **Dark mode** toggle (persisted)
+
 - **CSV export** of the current tab's list
+
 - **Failed-send toasts** — the 5s poll diff surfaces new failures without opening the table
 
 ## Run everything in Docker (optional)
@@ -141,11 +186,26 @@ Backend and frontend each have a `Dockerfile`; the backend image runs `prisma mi
 
 Postman collection: `docs/postman/ReachInbox.postman_collection.json`
 
+
+
 ## Assumptions & trade-offs
 
 - **Rate-limit keying**: counters are per *user* (tenant); each compose batch can carry its own `hourlyLimit`, and the shared counter is conservative when batches differ.
+
 - **Ordering**: jobs delayed into the next hour window keep approximate FIFO order; exact ordering under limit overflow is best-effort.
+
 - **Duplicate-send window**: a crash between SMTP success and the DB `sent` update could resend once; the window is sub-second and BullMQ stalled-job recovery covers worker crashes.
+
 - **Ethereal `from` address**: Ethereal accepts arbitrary `From` headers in practice; for real SMTP you'd verify sender domains.
+
 - **Dev login**: `ALLOW_DEV_LOGIN=true` exists only for local demos without Google OAuth configured; it is disabled by default.
+
 - **Search scope**: ES queries are filtered to the logged-in user.
+
+
+
+---
+
+> **Built for ReachInbox** — because at ReachInbox, reliable scheduling and sending of emails at scale isn't just a feature, it's the foundation everything else stands on. This project is a tiny slice of that system: persistent BullMQ jobs on Redis, a single source of truth in Postgres, safe rate limiting, real OAuth, live search — production patterns, zero cron, zero dropped emails.
+
+⭐ **See it in action** — clone it, run `docker compose up -d`, hit *Compose New Email*, and watch thousands of jobs schedule, throttle and send themselves — surviving restarts, respecting rate limits, and reporting every status back to you. Sometimes the best code is the kind you never have to think about. 🚀
