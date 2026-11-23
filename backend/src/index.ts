@@ -12,6 +12,8 @@ import { redisPing } from "./lib/redis";
 import { authRouter } from "./routes/auth";
 import { emailsRouter } from "./routes/emails";
 import { slackRouter } from "./routes/slack";
+import { templatesRouter } from "./routes/templates";
+import { trackRouter } from "./routes/track";
 import { ensureIndex } from "./services/elasticsearch";
 import { getTransporter } from "./services/mailer";
 
@@ -23,7 +25,7 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json({ limit: "2mb" }));
+app.use(express.json({ limit: "25mb" }));
 app.use(cookieParser());
 
 // --- Bull Board (live queue dashboard) ---
@@ -56,6 +58,8 @@ app.get("/api/health", async (_req, res) => {
 app.use("/api/auth", authRouter);
 app.use("/api/emails", emailsRouter);
 app.use("/api/slack", slackRouter);
+app.use("/api/templates", templatesRouter);
+app.use("/api/track", trackRouter);
 
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error("[api] error:", err);

@@ -77,6 +77,16 @@ export default function EmailTable({ emails, loading, emptyMessage }: Props) {
               <td className="whitespace-nowrap px-4 py-3 text-slate-600">{fmt(e.sentAt)}</td>
               <td className="px-4 py-3">
                 <StatusBadge status={e.status} />
+                {e.openedAt && (
+                  <div className="mt-1 text-xs text-emerald-600" title={`Opened ${fmt(e.openedAt)}`}>
+                    opened
+                  </div>
+                )}
+                {e.clickedAt && (
+                  <div className="text-xs text-indigo-600" title={`Clicked ${fmt(e.clickedAt)}`}>
+                    clicked
+                  </div>
+                )}
                 {e.status === "failed" && e.failReason && (
                   <div className="mt-1 max-w-[200px] truncate text-xs text-rose-500" title={e.failReason}>
                     {e.failReason}

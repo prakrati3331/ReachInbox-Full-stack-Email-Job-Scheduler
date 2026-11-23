@@ -1,5 +1,6 @@
 import nodemailer, { Transporter } from "nodemailer";
 import { config } from "../config";
+import { buildTrackedHtml } from "./tracking";
 
 let transporterPromise: Promise<Transporter> | null = null;
 
@@ -31,12 +32,20 @@ export function getTransporter(): Promise<Transporter> {
   return transporterPromise;
 }
 
+export interface SendAttachment {
+  filename: string;
+  content: Buffer;
+  contentType?: string;
+}
+
 export interface SendEmailInput {
   to: string;
   fromName: string;
   fromEmail: string;
   subject: string;
   body: string;
+  attachments?: SendAttachment[];
+  trackingToken?: string | null;
 }
 
 export async function sendEmail(input: SendEmailInput) {
@@ -46,10 +55,12 @@ export async function sendEmail(input: SendEmailInput) {
     to: input.to,
     subject: input.subject,
     text: input.body,
-    html: input.body
-      .split(/\n{2,}/)
-      .map((p) => `<p>${p.replace(/\n/g, "<br>")}</p>`)
-      .join(""),
+    html: buildTrackedHtml(input.body, input.trackingToken ?? null),
+    attachments: (input.attachments ?? []).map((a) => ({
+      filename: a.filename,
+      content: a.content,
+      contentType: a.contentType,
+    })),
   });
   return { messageId: info.messageId, previewUrl: nodemailer.getTestMessageUrl(info) };
 }

@@ -1,10 +1,13 @@
+import crypto from "crypto";
 import { Router } from "express";
 import multer from "multer";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { requireAuth } from "../lib/auth";
 import { emailQueue, jobIdFor } from "../lib/queue";
 import { indexEmail, searchEmails } from "../services/elasticsearch";
 import { config } from "../config";
+import { saveAttachments, MAX_ATTACHMENTS, MAX_ATTACHMENT_BYTES } from "../lib/attachments";
 
 export const emailsRouter = Router();
 emailsRouter.use(requireAuth);
@@ -31,6 +34,7 @@ interface ScheduleBody {
   hourlyLimit?: number;
   fromName?: string;
   fromEmail?: string;
+  attachments?: unknown;
 }
 
 emailsRouter.post("/schedule", async (req, res) => {
@@ -55,6 +59,11 @@ emailsRouter.post("/schedule", async (req, res) => {
   const fromName = b.fromName?.trim() || config.defaultFromName;
   const fromEmail = b.fromEmail?.trim() || config.defaultFromEmail;
 
+  const attachments = saveAttachments(b.attachments);
+  if (attachments === null) {
+    return res.status(400).json({ error: "invalid_attachments", maxFiles: MAX_ATTACHMENTS, maxBytes: MAX_ATTACHMENT_BYTES });
+  }
+
   const created = [];
   for (let i = 0; i < recipients.length; i++) {
     const scheduledAt = new Date(effectiveStart.getTime() + i * delayBetweenMs);
@@ -68,6 +77,10 @@ emailsRouter.post("/schedule", async (req, res) => {
         body: b.body,
         scheduledAt,
         hourlyLimit: hourlyLimit ?? config.maxEmailsPerHourPerSender,
+        attachments: attachments.length
+          ? (attachments as unknown as Prisma.InputJsonValue)
+          : undefined,
+        trackingToken: crypto.randomBytes(16).toString("hex"),
       },
     });
     const delay = Math.max(0, scheduledAt.getTime() - Date.now());

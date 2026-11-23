@@ -6,7 +6,10 @@ import { QUEUE_NAME, jobIdFor } from "./lib/queue";
 import { sendEmail } from "./services/mailer";
 import { checkHourlyLimit } from "./services/rateLimit";
 import { notifyRateLimitHit } from "./services/slack";
+import { fireStatusWebhook } from "./services/webhook";
 import { indexEmail } from "./services/elasticsearch";
+import { attachmentBuffer } from "./lib/attachments";
+import type { StoredAttachment } from "./lib/attachments";
 
 const QUEUE_OPTS = { connection: redis };
 
@@ -90,19 +93,37 @@ const worker = new Worker(
       data: { status: "sending", attempts: { increment: 1 } },
     });
     try {
+      const stored = (email.attachments as StoredAttachment[] | null) ?? [];
       const result = await sendEmail({
         to: email.recipient,
         fromName: email.fromName,
         fromEmail: email.fromEmail,
         subject: email.subject,
         body: email.body,
+        trackingToken: email.trackingToken,
+        attachments: stored
+          .map((a) => {
+            const content = attachmentBuffer(a);
+            return content
+              ? { filename: a.filename, content, contentType: a.contentType }
+              : null;
+          })
+          .filter((x): x is NonNullable<typeof x> => x !== null),
       });
+      const sentAt = new Date();
       await prisma.scheduledEmail.update({
         where: { id: email.id },
-        data: { status: "sent", sentAt: new Date(), failReason: null },
+        data: { status: "sent", sentAt, failReason: null },
       });
       console.log(`[worker] sent ${email.id} -> ${email.recipient} (${result.messageId})`);
       await indexEmail(email.id);
+      void fireStatusWebhook(email.userId, "email.sent", {
+        emailId: email.id,
+        recipient: email.recipient,
+        subject: email.subject,
+        status: "sent",
+        sentAt: sentAt.toISOString(),
+      });
     } catch (err) {
       const reason = err instanceof Error ? err.message : String(err);
       await prisma.scheduledEmail.update({
@@ -134,6 +155,16 @@ worker.on("failed", async (job, err) => {
     })
     .catch(() => {});
   await indexEmail(emailId);
+  const failed = await prisma.scheduledEmail.findUnique({ where: { id: emailId } });
+  if (failed) {
+    void fireStatusWebhook(failed.userId, "email.failed", {
+      emailId: failed.id,
+      recipient: failed.recipient,
+      subject: failed.subject,
+      status: "failed",
+      failReason: err.message,
+    });
+  }
 });
 
 worker.on("error", (err) => console.error("[worker] error:", err));

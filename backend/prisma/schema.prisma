@@ -13,9 +13,23 @@ model User {
   name             String
   avatarUrl        String?
   googleId         String?          @unique
+  webhookUrl       String?
   createdAt        DateTime         @default(now())
   emails           ScheduledEmail[]
+  templates        Template[]
   slackConnection  SlackConnection?
+}
+
+model Template {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  subject   String
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model SlackConnection {
@@ -47,6 +61,10 @@ model ScheduledEmail {
   bullJobId       String?
   hourWindow      String?   // e.g. "2026-11-23T14" bucket used for per-sender hourly counting
   rateLimitedAt   DateTime?
+  attachments     Json?     // [{ filename, contentType, dataBase64 }]
+  trackingToken   String?   @unique
+  openedAt        DateTime?
+  clickedAt       DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 

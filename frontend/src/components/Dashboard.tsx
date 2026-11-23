@@ -143,6 +143,7 @@ export default function Dashboard({ user, onUserChange, pushToast }: Props) {
           onClose={() => setComposeOpen(false)}
           onScheduled={() => load()}
           pushToast={pushToast}
+          webhookUrl={user.webhookUrl ?? null}
         />
       )}
     </div>

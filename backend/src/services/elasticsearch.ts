@@ -24,6 +24,8 @@ export async function ensureIndex(): Promise<void> {
           status: { type: "keyword" },
           scheduledAt: { type: "date" },
           sentAt: { type: "date" },
+          openedAt: { type: "date" },
+          clickedAt: { type: "date" },
         },
       },
     });
@@ -50,6 +52,8 @@ export async function indexEmail(emailId: string): Promise<void> {
         status: email.status,
         scheduledAt: email.scheduledAt.toISOString(),
         sentAt: email.sentAt?.toISOString() ?? null,
+        openedAt: email.openedAt?.toISOString() ?? null,
+        clickedAt: email.clickedAt?.toISOString() ?? null,
       },
     });
   } catch (err) {

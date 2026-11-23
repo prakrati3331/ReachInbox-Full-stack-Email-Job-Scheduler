@@ -103,6 +103,24 @@ authRouter.get("/me", requireAuth, async (req, res) => {
   res.json({ user });
 });
 
+authRouter.put("/webhook", requireAuth, async (req, res) => {
+  const { webhookUrl } = req.body ?? {};
+  if (webhookUrl !== null && webhookUrl !== "" && webhookUrl !== undefined) {
+    try {
+      const u = new URL(String(webhookUrl));
+      if (u.protocol !== "http:" && u.protocol !== "https:") throw new Error("bad protocol");
+    } catch {
+      return res.status(400).json({ error: "invalid_webhook_url" });
+    }
+  }
+  const user = await prisma.user.update({
+    where: { id: req.userId },
+    data: { webhookUrl: webhookUrl ? String(webhookUrl) : null },
+    select: { webhookUrl: true },
+  });
+  res.json({ webhookUrl: user.webhookUrl });
+});
+
 authRouter.post("/logout", (_req, res) => {
   clearSessionCookie(res);
   res.json({ ok: true });

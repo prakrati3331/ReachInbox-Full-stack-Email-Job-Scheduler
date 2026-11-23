@@ -3,6 +3,7 @@ export interface User {
   email: string;
   name: string;
   avatarUrl: string | null;
+  webhookUrl?: string | null;
   slackConnection?: {
     teamName: string | null;
     channelId: string | null;
@@ -29,10 +30,20 @@ export interface ScheduledEmail {
   status: EmailStatus;
   failReason: string | null;
   hourlyLimit: number;
+  openedAt?: string | null;
+  clickedAt?: string | null;
   createdAt: string;
 }
 
 export interface SentEmail extends ScheduledEmail {}
+
+export interface Template {
+  id: string;
+  name: string;
+  subject: string;
+  body: string;
+  createdAt: string;
+}
 
 export interface SlackStatus {
   configured: boolean;

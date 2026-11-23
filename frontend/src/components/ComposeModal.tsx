@@ -1,13 +1,31 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
+import type { Template } from "../types";
+
+interface AttachmentDraft {
+  filename: string;
+  contentType: string;
+  size: number;
+  dataBase64: string;
+}
 
 interface Props {
   onClose: () => void;
   onScheduled: (count: number) => void;
   pushToast: (msg: string, kind?: "ok" | "err") => void;
+  webhookUrl?: string | null;
 }
 
-export default function ComposeModal({ onClose, onScheduled, pushToast }: Props) {
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result).split(",")[1] ?? "");
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+export default function ComposeModal({ onClose, onScheduled, pushToast, webhookUrl }: Props) {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [emails, setEmails] = useState<string[]>([]);
@@ -23,6 +41,23 @@ export default function ComposeModal({ onClose, onScheduled, pushToast }: Props)
   const [submitting, setSubmitting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Templates
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [templateId, setTemplateId] = useState("");
+  const [templateName, setTemplateName] = useState("");
+
+  // Attachments
+  const [attachments, setAttachments] = useState<AttachmentDraft[]>([]);
+  const attachRef = useRef<HTMLInputElement>(null);
+
+  // Webhook
+  const [webhook, setWebhook] = useState(webhookUrl ?? "");
+  const [webhookBusy, setWebhookBusy] = useState(false);
+
+  useEffect(() => {
+    api.templates().then((r) => setTemplates(r.templates)).catch(() => {});
+  }, []);
+
   const handleFile = async (file: File) => {
     setParsing(true);
     try {
@@ -34,6 +69,62 @@ export default function ComposeModal({ onClose, onScheduled, pushToast }: Props)
       pushToast(e instanceof Error ? e.message : "Failed to parse file", "err");
     } finally {
       setParsing(false);
+    }
+  };
+
+  const handleAttachments = async (files: FileList | null) => {
+    if (!files) return;
+    for (const f of Array.from(files)) {
+      if (attachments.length >= 5) {
+        pushToast("Max 5 attachments", "err");
+        break;
+      }
+      const dataBase64 = await fileToBase64(f);
+      setAttachments((a) => [
+        ...a,
+        { filename: f.name, contentType: f.type || "application/octet-stream", size: f.size, dataBase64 },
+      ]);
+    }
+    if (attachRef.current) attachRef.current.value = "";
+  };
+
+  const applyTemplate = (id: string) => {
+    setTemplateId(id);
+    const t = templates.find((x) => x.id === id);
+    if (t) {
+      setSubject(t.subject);
+      setBody(t.body);
+    }
+  };
+
+  const saveTemplate = async () => {
+    if (!templateName.trim() || !subject.trim() || !body.trim()) {
+      pushToast("Name, subject and body needed to save a template", "err");
+      return;
+    }
+    try {
+      const { template } = await api.createTemplate({
+        name: templateName.trim(),
+        subject,
+        body,
+      });
+      setTemplates((t) => [template, ...t]);
+      setTemplateName("");
+      pushToast("Template saved");
+    } catch (e) {
+      pushToast(e instanceof Error ? e.message : "Failed to save template", "err");
+    }
+  };
+
+  const saveWebhook = async () => {
+    setWebhookBusy(true);
+    try {
+      await api.setWebhook(webhook.trim() || null);
+      pushToast(webhook.trim() ? "Webhook URL saved" : "Webhook cleared");
+    } catch (e) {
+      pushToast(e instanceof Error ? e.message : "Failed to save webhook", "err");
+    } finally {
+      setWebhookBusy(false);
     }
   };
 
@@ -55,6 +146,11 @@ export default function ComposeModal({ onClose, onScheduled, pushToast }: Props)
         startAt: new Date(startAt).toISOString(),
         delayBetweenMs: Math.max(0, Number(delaySec) || 0) * 1000,
         hourlyLimit: Number(hourlyLimit) > 0 ? Number(hourlyLimit) : undefined,
+        attachments: attachments.map(({ filename, contentType, dataBase64 }) => ({
+          filename,
+          contentType,
+          dataBase64,
+        })),
       });
       pushToast(`Scheduled ${res.scheduled} email${res.scheduled === 1 ? "" : "s"}`);
       onScheduled(res.scheduled);
@@ -82,6 +178,24 @@ export default function ComposeModal({ onClose, onScheduled, pushToast }: Props)
         </div>
 
         <div className="space-y-4">
+          {templates.length > 0 && (
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Template</label>
+              <select
+                value={templateId}
+                onChange={(e) => applyTemplate(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+              >
+                <option value="">— Start blank —</option>
+                {templates.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Leads (CSV / TXT)</label>
             <input
@@ -125,6 +239,45 @@ export default function ComposeModal({ onClose, onScheduled, pushToast }: Props)
             />
           </div>
 
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">
+              Attachments <span className="font-normal text-slate-400">(optional, max 5 · 8MB total)</span>
+            </label>
+            <input
+              ref={attachRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(e) => handleAttachments(e.target.files)}
+            />
+            <button
+              onClick={() => attachRef.current?.click()}
+              className="w-full rounded-lg border-2 border-dashed border-slate-300 px-4 py-3 text-sm text-slate-500 hover:border-indigo-400 hover:text-indigo-600"
+            >
+              + Add attachments
+            </button>
+            {attachments.length > 0 && (
+              <ul className="mt-2 space-y-1">
+                {attachments.map((a, i) => (
+                  <li
+                    key={i}
+                    className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-1.5 text-xs text-slate-600"
+                  >
+                    <span className="truncate">
+                      {a.filename} <span className="text-slate-400">({(a.size / 1024).toFixed(1)} KB)</span>
+                    </span>
+                    <button
+                      onClick={() => setAttachments((x) => x.filter((_, j) => j !== i))}
+                      className="ml-2 text-rose-500 hover:text-rose-700"
+                    >
+                      ✕
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
           <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-700">Start time</label>
@@ -155,6 +308,47 @@ export default function ComposeModal({ onClose, onScheduled, pushToast }: Props)
                 onChange={(e) => setHourlyLimit(e.target.value)}
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
               />
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <label className="mb-1 block text-sm font-medium text-slate-700">
+              Save as template
+            </label>
+            <div className="flex gap-2">
+              <input
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                placeholder="Template name"
+                className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm focus:border-indigo-500 focus:outline-none"
+              />
+              <button
+                onClick={saveTemplate}
+                className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <label className="mb-1 block text-sm font-medium text-slate-700">
+              Status webhook <span className="font-normal text-slate-400">(POSTed on sent/failed)</span>
+            </label>
+            <div className="flex gap-2">
+              <input
+                value={webhook}
+                onChange={(e) => setWebhook(e.target.value)}
+                placeholder="https://example.com/hook"
+                className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm focus:border-indigo-500 focus:outline-none"
+              />
+              <button
+                onClick={saveWebhook}
+                disabled={webhookBusy}
+                className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+              >
+                {webhookBusy ? "…" : "Save"}
+              </button>
             </div>
           </div>
 

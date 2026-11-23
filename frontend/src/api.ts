@@ -5,6 +5,7 @@ import type {
   SearchResult,
   SlackChannel,
   SlackStatus,
+  Template,
   User,
 } from "./types";
 
@@ -30,6 +31,17 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   me: () => request<{ user: User }>("/auth/me"),
   logout: () => request<{ ok: boolean }>("/auth/logout", { method: "POST" }),
+  setWebhook: (webhookUrl: string | null) =>
+    request<{ webhookUrl: string | null }>("/auth/webhook", {
+      method: "PUT",
+      body: JSON.stringify({ webhookUrl }),
+    }),
+
+  templates: () => request<{ templates: Template[] }>("/templates"),
+  createTemplate: (t: { name: string; subject: string; body: string }) =>
+    request<{ template: Template }>("/templates", { method: "POST", body: JSON.stringify(t) }),
+  deleteTemplate: (id: string) =>
+    request<{ ok: boolean }>(`/templates/${id}`, { method: "DELETE" }),
 
   parseLeads: (file: File) => {
     const fd = new FormData();
@@ -44,6 +56,7 @@ export const api = {
     startAt: string;
     delayBetweenMs: number;
     hourlyLimit?: number;
+    attachments?: { filename: string; contentType: string; dataBase64: string }[];
   }) =>
     request<{ scheduled: number }>("/emails/schedule", {
       method: "POST",

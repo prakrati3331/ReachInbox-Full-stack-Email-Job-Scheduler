@@ -1,4 +1,4 @@
-# Outbox — Email Scheduler & Dashboard
+# Outbox — Email Job Scheduler & Dashboard
 
 A production-grade email scheduling service: accept send requests via API, schedule them with **BullMQ delayed jobs on Redis**, persist everything in **PostgreSQL**, send through **Ethereal Email (fake SMTP)**, index emails in **Elasticsearch** for search, and serve a **React dashboard** with Google login, compose, scheduled/sent views and Slack rate-limit alerts.
 
@@ -94,11 +94,16 @@ npm run dev              # http://localhost:5173 (proxies /api -> :4000)
 - Elasticsearch indexing & search API
 - Bull Board queue dashboard
 - Ethereal SMTP sending via nodemailer (auto test account if no creds)
+- **Email templates** — per-user reusable subject/body (`/api/templates` CRUD, picker + "save as template" in compose)
+- **Attachments** — up to 5 files / 8 MB total per email, stored under `backend/uploads/` and attached via nodemailer
+- **Open/click tracking** — every email gets a per-recipient tracking token; HTML includes a 1×1 open pixel (`/api/track/o/:token.gif`) and links are rewritten through `/api/track/c/:token?u=…` redirects. `openedAt`/`clickedAt` are recorded on the email and shown in the dashboard
+- **Status webhooks** — users can set a webhook URL (`PUT /api/auth/webhook` or the compose modal); the backend POSTs `{event: "email.sent"|"email.failed", …}` JSON on terminal status changes
 
 **Frontend**
 - Real Google OAuth login, header with name/email/avatar, logout
 - Scheduled / Sent tabs with loading + empty states, live polling
-- Compose modal: CSV/TXT lead upload with detected-count, subject, body, start time, delay, hourly limit
+- Compose modal: template picker + save-as-template, CSV/TXT lead upload with detected-count, attachments (max 5 / 8 MB), subject, body, start time, delay, hourly limit, status webhook URL
+- Open/click badges on sent emails; attachments stored in `backend/uploads/` (gitignored)
 - Elasticsearch-backed search across emails
 - Slack connect/disconnect + notification channel picker
 
