@@ -5,11 +5,16 @@ import { buildTrackedHtml } from "./tracking";
 let transporterPromise: Promise<Transporter> | null = null;
 
 async function createTransporter(): Promise<Transporter> {
+  const smtpPort = Number(process.env.SMTP_PORT ?? 465);
+  const smtpSecure = smtpPort === 465;
   if (config.etherealUser && config.etherealPass) {
     return nodemailer.createTransport({
       host: "smtp.ethereal.email",
-      port: 587,
-      secure: false,
+      port: smtpPort,
+      secure: smtpSecure,
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+      socketTimeout: 30000,
       auth: { user: config.etherealUser, pass: config.etherealPass },
     });
   }
@@ -21,8 +26,11 @@ async function createTransporter(): Promise<Transporter> {
   console.log(`[mailer] Ethereal web UI: https://ethereal.email`);
   return nodemailer.createTransport({
     host: "smtp.ethereal.email",
-    port: 587,
-    secure: false,
+    port: smtpPort,
+    secure: smtpSecure,
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 30000,
     auth: { user: testAccount.user, pass: testAccount.pass },
   });
 }
