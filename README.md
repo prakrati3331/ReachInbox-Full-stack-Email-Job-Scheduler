@@ -129,7 +129,7 @@ npm run dev              # http://localhost:5173 (proxies /api -> :4000)
 
 - **Email templates** — per-user reusable subject/body (`/api/templates` CRUD, picker + "save as template" in compose)
 - **Attachments** — up to 5 files / 8 MB total per email, stored under `backend/uploads/` and attached via nodemailer
-- **Open/click tracking** — every email gets a per-recipient tracking token; HTML includes a 1×1 open pixel (`/api/track/o/:token.gif`) and links are rewritten through `/api/track/c/:token?u=…` redirects. `openedAt`/`clickedAt` are recorded on the email and shown in the dashboard
+- **Open/click tracking** — every email gets a per-recipient tracking token; HTML includes a 1×1 open pixel (`/api/track/o/:token.gif`) and links are the rewritten through `/api/track/c/:token?u=…` redirects. `openedAt`/`clickedAt` are recorded on the email and shown in the dashboard
 - **Status webhooks** — users can set a webhook URL (`PUT /api/auth/webhook` or the compose modal); the backend POSTs `{event: "email.sent"|"email.failed", …}` JSON on terminal status changes
 
 
