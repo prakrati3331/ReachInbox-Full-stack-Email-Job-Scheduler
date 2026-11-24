@@ -62,6 +62,8 @@ services:
       # --- fill these in after deploy (Render dashboard -> Environment) ---
       - key: ELASTICSEARCH_URL
         sync: false
+      - key: ELASTICSEARCH_API_KEY
+        sync: false
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
