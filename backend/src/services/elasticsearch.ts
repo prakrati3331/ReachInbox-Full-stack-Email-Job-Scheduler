@@ -2,7 +2,19 @@ import { Client } from "@elastic/elasticsearch";
 import { config } from "../config";
 import { prisma } from "../lib/prisma";
 
-const client = new Client({ node: config.elasticsearchUrl });
+// Accepts ELASTICSEARCH_URL either bare (http://host:9200) or with
+// credentials embedded (https://user:pass@host:443) — common for
+// Elastic Cloud deployments.
+const esNode = new URL(config.elasticsearchUrl);
+const client = new Client({
+  node: `${esNode.protocol}//${esNode.host}`,
+  auth: esNode.username
+    ? {
+        username: decodeURIComponent(esNode.username),
+        password: decodeURIComponent(esNode.password),
+      }
+    : undefined,
+});
 
 let ensured = false;
 
