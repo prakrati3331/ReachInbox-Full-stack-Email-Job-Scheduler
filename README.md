@@ -64,14 +64,6 @@ flowchart TD
 
 
 
-<p>
-  <b>🌐 Hosted Application:</b><br/>
-  <a href="https://reachinbox-app-v1vg.onrender.com/">
-    https://reachinbox-app-v1vg.onrender.com/
-  </a>
-</p>
-
-</div>
 
 ---
 
