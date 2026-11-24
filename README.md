@@ -62,18 +62,7 @@ flowchart TD
 
 <div align="center">
 
-# 🚀 ReachInbox – Full Stack Email Job Scheduler
 
-### Smart, Automated & Reliable Email Scheduling Platform
-
-<p>
-  <a href="https://reachinbox-app-v1vg.onrender.com/" target="_blank">
-    <img src="https://img.shields.io/badge/🚀_LIVE_DEMO-Visit_Project-success?style=for-the-badge" alt="Live Demo"/>
-  </a>
-  <a href="https://github.com/prakrati3331/ReachInbox-Full-stack-Email-Job-Scheduler" target="_blank">
-    <img src="https://img.shields.io/badge/GitHub-View_Repository-black?style=for-the-badge&logo=github" alt="GitHub"/>
-  </a>
-</p>
 
 <p>
   <b>🌐 Hosted Application:</b><br/>
