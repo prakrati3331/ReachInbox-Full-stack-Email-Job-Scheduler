@@ -6,7 +6,13 @@ import { prisma } from "../lib/prisma";
 // credentials embedded (https://user:pass@host:443) — common for
 // Elastic Cloud deployments.
 const esNode = new URL(config.elasticsearchUrl);
-const esApiKey = process.env.ELASTICSEARCH_API_KEY;
+// Auth precedence: ELASTICSEARCH_API_KEY env > "apikey:TOKEN@host" URL
+// convention > user:password basic auth embedded in the URL.
+const urlApiKey =
+  esNode.username === "apikey"
+    ? decodeURIComponent(esNode.password)
+    : null;
+const esApiKey = process.env.ELASTICSEARCH_API_KEY ?? urlApiKey;
 const client = new Client({
   node: `${esNode.protocol}//${esNode.host}`,
   auth: esApiKey
