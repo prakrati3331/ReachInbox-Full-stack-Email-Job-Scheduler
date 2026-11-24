@@ -5,8 +5,27 @@ import { buildTrackedHtml } from "./tracking";
 let transporterPromise: Promise<Transporter> | null = null;
 
 async function createTransporter(): Promise<Transporter> {
-  const smtpPort = Number(process.env.SMTP_PORT ?? 465);
-  const smtpSecure = smtpPort === 465;
+  const smtpHost = process.env.SMTP_HOST;
+  const smtpPort = Number(process.env.SMTP_PORT ?? (smtpHost ? 2525 : 465));
+  const smtpSecure = process.env.SMTP_SECURE
+    ? process.env.SMTP_SECURE === "true"
+    : smtpPort === 465;
+
+  if (smtpHost && process.env.SMTP_USER && process.env.SMTP_PASS) {
+    return nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpSecure,
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+      socketTimeout: 30000,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+  }
+
   if (config.etherealUser && config.etherealPass) {
     return nodemailer.createTransport({
       host: "smtp.ethereal.email",
@@ -18,6 +37,7 @@ async function createTransporter(): Promise<Transporter> {
       auth: { user: config.etherealUser, pass: config.etherealPass },
     });
   }
+
   // No creds provided -> create a throwaway Ethereal test account at boot.
   const testAccount = await nodemailer.createTestAccount();
   console.log(
