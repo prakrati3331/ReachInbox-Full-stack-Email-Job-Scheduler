@@ -59,6 +59,48 @@ flowchart TD
     style G fill:#fee2e2,stroke:#dc2626
 ```
 
+
+<div align="center">
+
+# 🚀 ReachInbox – Full Stack Email Job Scheduler
+
+### Smart, Automated & Reliable Email Scheduling Platform
+
+<p>
+  <a href="https://reachinbox-app-v1vg.onrender.com/" target="_blank">
+    <img src="https://img.shields.io/badge/🚀_LIVE_DEMO-Visit_Project-success?style=for-the-badge" alt="Live Demo"/>
+  </a>
+  <a href="https://github.com/prakrati3331/ReachInbox-Full-stack-Email-Job-Scheduler" target="_blank">
+    <img src="https://img.shields.io/badge/GitHub-View_Repository-black?style=for-the-badge&logo=github" alt="GitHub"/>
+  </a>
+</p>
+
+<p>
+  <b>🌐 Hosted Application:</b><br/>
+  <a href="https://reachinbox-app-v1vg.onrender.com/">
+    https://reachinbox-app-v1vg.onrender.com/
+  </a>
+</p>
+
+</div>
+
+---
+
+## 🌍 Live Project
+
+Experience the deployed ReachInbox application directly:
+
+<p align="center">
+  <a href="https://reachinbox-app-v1vg.onrender.com/" target="_blank">
+    <img src="https://img.shields.io/badge/OPEN_LIVE_APPLICATION-Click_Here-2563EB?style=for-the-badge&logo=render&logoColor=white" alt="Open Live Application"/>
+  </a>
+</p>
+
+**Project Status:** Deployed on Render.
+
+> Explore the live application to experience its email scheduling and automation capabilities.
+---
+
 ## Repo layout
 
 ```
